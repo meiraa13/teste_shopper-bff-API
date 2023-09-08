@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request } from "express";
 import { connectClient } from "../database/config";
 import { AppError } from "../error";
 import { IData, convertCsvFile } from "../middlewares/convertCsvFile.middleware";
@@ -12,8 +12,8 @@ export interface IProduct{
     pack?:boolean,
     item_id?:Array<number>,
     item_qty?:number,
-    has_pack:boolean,
-    pack_id:number,
+    has_pack?:boolean,
+    pack_id?:number,
     errorMessage?:string
 }
 
@@ -26,23 +26,20 @@ async function validateCsvService(req:Request ):Promise<IProduct[]>{
 
     for(const product of csvData){
         if( Number(product.product_code) >=  1000 && Number(product.product_code) <= 1020 ){
-    
             const [query]:any = await client.query("SELECT * FROM packs WHERE pack_id = ?",[product.product_code])
         
             product.product_code = query[0].pack_id
             product['pack'] = true
             query.length == 2 ? product['item_id'] = [query[0].product_id, query[1].product_id]: product['item_id'] = [query[0].product_id]
             product['item_qty'] = query[0].qty
-            
         }
-
+    
         const[findPack]:any = await client.query("SELECT * FROM packs WHERE product_id = ?", [product.product_code])
        
         if(findPack[0]){
             product['has_pack'] = true
             product['pack_id'] = findPack[0].pack_id
         }
-        
         
         if(!("product_code" in product)){
             throw new AppError("Está faltando o código do produto", 404)
@@ -85,69 +82,101 @@ async function validateCsvService(req:Request ):Promise<IProduct[]>{
         }
 
         returnArr.push(currentProduct)
-
-        
     }
    
-    const pack = returnArr.find((product)=> product.pack)
-    const item1FromPack = returnArr.find((product)=>product.code == pack?.item_id![0])
-    const item2FromPack = returnArr.find((product)=>product.code == pack?.item_id![1])
-
-
-    if(pack && !item1FromPack && !item2FromPack){
-        throw new AppError("Favor informar o item que pertence ao pacote", 409)
-    }
-
-    if(item1FromPack){
-        const salesDiff = Number(item1FromPack.new_price) - Number(item1FromPack?.sales_price)
-        const roundedNumber = Number(salesDiff.toFixed(1))
-        console.log(salesDiff)
-        const sum = Number(pack?.sales_price) + roundedNumber
-        const roundedSum = Number(sum.toFixed(1))
-        console.log(roundedSum)
-        
-        if(Number(pack?.new_price) !== roundedSum){
-            throw new AppError("Precisa ajustar o preço do pacote ou do item", 409)
-        }
-    }
-
-    if(item2FromPack){
-        const salesDiff = Number(item2FromPack?.new_price) - Number(item2FromPack?.sales_price)
-        const roundedNumber = Number(salesDiff.toFixed(1))
-        const sum = Number(pack?.sales_price) + roundedNumber
-        const roundedSum = Number(sum.toFixed(1))
-        if(Number(pack?.new_price) !== roundedSum){
-            throw new AppError("Precisa ajustar o preço do pacote ou do item", 409)
-        }
-    }
-
-    // if(pack && !itemFromPack){
-    //     throw new AppError("Favor informar o código e preço do item que pertence ao pacote", 404)
-    // }else if(pack){
-    //     if(Number(itemFromPack?.new_price) * Number(pack?.item_qty) !== Number(pack?.new_price)){
-    //         throw new AppError("O preço do item ou do pacote não estão em conformidade", 409)
-    //     }
-    // }
-          
-    // const item = returnArr.find((product)=> product.has_pack)
-    // const packFromItem = returnArr.find((product)=> product.code == item?.pack_id)
-  
-
-    // if(item && !packFromItem){
-    //     throw new AppError("Favor informar o pack também", 404)
-    // }else if(item){
-    //     if(Number(item.new_price) * Number(packFromItem?.item_qty) !== Number(packFromItem?.new_price)){
-    //         throw new AppError("O preço do item ou do pacote não estão em conformidade", 409)
-    //     }
-    // }
     
+    const pack = returnArr.find((product)=> product.pack)
+    const itemHasPack = returnArr.find((product)=>product.has_pack)
+    
+    if(pack){
+        const item1FromPack = returnArr.find((product)=>product.code == pack?.item_id![0])
+        const item2FromPack = returnArr.find((product)=>product.code == pack?.item_id![1])
+        
+        if(!item1FromPack && !item2FromPack){
+            pack["errorMessage"] = "Informar o item que pertence ao pack"
+        }
+        
+        const packItem1 = pack.item_id![0]
+        const packItem2 = pack.item_id![1]
+    
+
+        if(packItem1 && !packItem2 || !packItem1 && packItem2){
+
+            if(item1FromPack && !item2FromPack){
+                const itemPriceToNumber = Number(item1FromPack.new_price)
+                const roundedItemPrice = Number(itemPriceToNumber.toFixed(1))
+                const packPriceToNumber = Number(pack.new_price)
+                const roundedPackPrice = Number(packPriceToNumber.toFixed(1))
+        
+                const multiplyOperation = roundedItemPrice * Number(pack.item_qty)
+                const roundedMultiply = Number(multiplyOperation.toFixed(1))
+                if(roundedMultiply !== roundedPackPrice){
+                        item1FromPack["errorMessage"] = "Preço em não conformidade com pacote"
+                }
+            }
+    
+            if(!item1FromPack && item2FromPack){
+                const itemPriceToNumber = Number(item2FromPack.new_price)
+                const roundedItemPrice = Number(itemPriceToNumber.toFixed(1))
+                const packPriceToNumber = Number(pack.new_price)
+                const roundedPackPrice = Number(packPriceToNumber.toFixed(1))
+        
+                const multiplyOperation = roundedItemPrice * Number(pack.item_qty)
+                const roundedMultiply = Number(multiplyOperation.toFixed(1))
+                if(roundedMultiply !== roundedPackPrice){
+                    item2FromPack["errorMessage"] = "Preço em não conformidade com pacote"
+                }
+            }
+
+        }
+        
+        
+        if(packItem1 && packItem2){
+            if(item1FromPack && !item2FromPack){
+                const newItemPriceToNumber = Number(item1FromPack.new_price)
+                const roundedNewItemPrice = Number(newItemPriceToNumber.toFixed(1))
+                const currentItemPriceToNumber = Number(item1FromPack.sales_price)
+                const roundedCurrentItemPrice = Number(currentItemPriceToNumber.toFixed(1))
+                const increaseAmount = roundedNewItemPrice - roundedCurrentItemPrice
+                const packPriceToNumber = Number(pack.new_price)
+                const roundedPackPrice = Number(packPriceToNumber.toFixed(1))
+        
+                const multiplyOperation = increaseAmount * Number(pack.item_qty)
+                const roundedMultiply = Number(multiplyOperation.toFixed(1))
+                if(roundedPackPrice !== Number(pack.sales_price) + roundedMultiply ){
+                        item1FromPack["errorMessage"] = "Preço em não conformidade com pacote"
+                }
+            }
+
+            if(!item1FromPack && item2FromPack){
+                const newItemPriceToNumber = Number(item2FromPack.new_price)
+                const roundedNewItemPrice = Number(newItemPriceToNumber.toFixed(1))
+                const currentItemPriceToNumber = Number(item2FromPack.sales_price)
+                const roundedCurrentItemPrice = Number(currentItemPriceToNumber.toFixed(1))
+                const increaseAmount = roundedNewItemPrice - roundedCurrentItemPrice
+                const packPriceToNumber = Number(pack.new_price)
+                const roundedPackPrice = Number(packPriceToNumber.toFixed(1))
+        
+                const multiplyOperation = increaseAmount * Number(pack.item_qty)
+                const roundedMultiply = Number(multiplyOperation.toFixed(1))
+                if(roundedPackPrice !== Number(pack.sales_price) + roundedMultiply ){
+                        item2FromPack["errorMessage"] = "Preço em não conformidade com pacote"
+                }
+            }
+        }
+    }
+
+    if(itemHasPack){
+        const packFromItem = returnArr.find((product)=> product.code == itemHasPack?.pack_id)
+
+        if(itemHasPack && !packFromItem){
+            itemHasPack["errorMessage"] = "Informar o pack também"
+        }
+    }
 
    
 
     return returnArr
-
-   
-
 }
 
 

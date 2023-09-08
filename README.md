@@ -5,6 +5,12 @@ Esta é uma API que possui um banco de dados em MySql5 de produtos para um ecomm
 -  POST /products : recebe um arquivo .csv e valida os dados de acordo com as regras de negocio pre estabelecidas
 -  PATCH /products: após validação dos dados um botão de atualizar é desbloqueado no front, permitindo fazer a atualização de preços no banco de dados
 
+## Formato de envio do .csv
+
+- linha 1 coluna A: product_code,new_price
+- Inserir o codigo e preço de cada produto nas linhas abaixo na coluna A, ex: 18,9.10
+- para informar um produto que é um pack deve ser informado o codigo do produto(pack) e não id do pack 
+
 ## Tecnologias Utilizadas
 
 - Node.js
