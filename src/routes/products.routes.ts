@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { readDataController, updateProductController, validateCsvController } from "../controllers/data.controllers";
 import multer from "multer";
-import multerConfig from "../configs/multer.config"
 import { verifyCSVMiddleware } from "../middlewares/verifyCSV.middleware";
 import {resolve} from "node:path"
 
