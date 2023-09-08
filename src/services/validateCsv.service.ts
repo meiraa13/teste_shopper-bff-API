@@ -133,33 +133,29 @@ async function validateCsvService(req:Request ):Promise<IProduct[]>{
         
         if(packItem1 && packItem2){
             if(item1FromPack && !item2FromPack){
-                const newItemPriceToNumber = Number(item1FromPack.new_price)
-                const roundedNewItemPrice = Number(newItemPriceToNumber.toFixed(1))
-                const currentItemPriceToNumber = Number(item1FromPack.sales_price)
-                const roundedCurrentItemPrice = Number(currentItemPriceToNumber.toFixed(1))
+                const roundedNewItemPrice = Number(Number(item1FromPack.new_price).toFixed(1))
+                const roundedCurrentItemPrice = Number(Number(item1FromPack.sales_price).toFixed(1))
                 const increaseAmount = roundedNewItemPrice - roundedCurrentItemPrice
-                const packPriceToNumber = Number(pack.new_price)
-                const roundedPackPrice = Number(packPriceToNumber.toFixed(1))
-        
+                const roundedNewPackPrice = Number(Number(pack.new_price).toFixed(1))
+                const roundedCurrentPackPrice = Number(Number(pack.sales_price).toFixed(1))
+                
                 const multiplyOperation = increaseAmount * Number(pack.item_qty)
                 const roundedMultiply = Number(multiplyOperation.toFixed(1))
-                if(roundedPackPrice !== Number(pack.sales_price) + roundedMultiply ){
-                        item1FromPack["errorMessage"] = "Preço em não conformidade com pacote"
+                if(roundedNewPackPrice !== roundedCurrentPackPrice + roundedMultiply ){
+                    item1FromPack["errorMessage"] = "Preço em não conformidade com pacote"
                 }
             }
-
+            
             if(!item1FromPack && item2FromPack){
-                const newItemPriceToNumber = Number(item2FromPack.new_price)
-                const roundedNewItemPrice = Number(newItemPriceToNumber.toFixed(1))
-                const currentItemPriceToNumber = Number(item2FromPack.sales_price)
-                const roundedCurrentItemPrice = Number(currentItemPriceToNumber.toFixed(1))
+                const roundedNewItemPrice = Number(Number(item2FromPack.new_price).toFixed(1))
+                const roundedCurrentItemPrice = Number(Number(item2FromPack.sales_price).toFixed(1))
                 const increaseAmount = roundedNewItemPrice - roundedCurrentItemPrice
-                const packPriceToNumber = Number(pack.new_price)
-                const roundedPackPrice = Number(packPriceToNumber.toFixed(1))
-        
+                const roundedNewPackPrice = Number(Number(pack.new_price).toFixed(1))
+                const roundedCurrentPackPrice = Number(Number(pack.sales_price).toFixed(1))
+                
                 const multiplyOperation = increaseAmount * Number(pack.item_qty)
                 const roundedMultiply = Number(multiplyOperation.toFixed(1))
-                if(roundedPackPrice !== Number(pack.sales_price) + roundedMultiply ){
+                if(roundedNewPackPrice !== roundedCurrentPackPrice + roundedMultiply ){
                         item2FromPack["errorMessage"] = "Preço em não conformidade com pacote"
                 }
             }
