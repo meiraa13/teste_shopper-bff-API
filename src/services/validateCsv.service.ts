@@ -92,14 +92,35 @@ async function validateCsvService(req:Request ):Promise<IProduct[]>{
     const pack = returnArr.find((product)=> product.pack)
     const item1FromPack = returnArr.find((product)=>product.code == pack?.item_id![0])
     const item2FromPack = returnArr.find((product)=>product.code == pack?.item_id![1])
-    console.log(item1FromPack)
-    console.log(item2FromPack)
+
 
     if(pack && !item1FromPack && !item2FromPack){
         throw new AppError("Favor informar o item que pertence ao pacote", 409)
     }
 
-    
+    if(item1FromPack){
+        const salesDiff = Number(item1FromPack.new_price) - Number(item1FromPack?.sales_price)
+        const roundedNumber = Number(salesDiff.toFixed(1))
+        console.log(salesDiff)
+        const sum = Number(pack?.sales_price) + roundedNumber
+        const roundedSum = Number(sum.toFixed(1))
+        console.log(roundedSum)
+        
+        if(Number(pack?.new_price) !== roundedSum){
+            throw new AppError("Precisa ajustar o preço do pacote ou do item", 409)
+        }
+    }
+
+    if(item2FromPack){
+        const salesDiff = Number(item2FromPack?.new_price) - Number(item2FromPack?.sales_price)
+        const roundedNumber = Number(salesDiff.toFixed(1))
+        const sum = Number(pack?.sales_price) + roundedNumber
+        const roundedSum = Number(sum.toFixed(1))
+        if(Number(pack?.new_price) !== roundedSum){
+            throw new AppError("Precisa ajustar o preço do pacote ou do item", 409)
+        }
+    }
+
     // if(pack && !itemFromPack){
     //     throw new AppError("Favor informar o código e preço do item que pertence ao pacote", 404)
     // }else if(pack){
